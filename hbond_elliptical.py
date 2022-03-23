@@ -48,16 +48,16 @@ def getGroups(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_h
     Hydrogen = top.select(sel_hydrogen)
     OxygenTail = top.select(sel_oxygen_tail)
 
-    return OxygenHead, Hydrogen, OxygenTail, list_names_hydrogen,list_names_oxygen_head, list_names_oxygen_tail 
+    return OxygenHead, Hydrogen, OxygenTail, list_names_hydrogen,list_names_oxygen_head, list_names_oxygen_tail
 
-def ellipticalFun(dist,cosangle):
+def ellipticalFun(dist,degangle):
     """Check if a point falls in the elliptical region.
     Parameters
     ----------
     dist : float
         Distance in nm
-    cosangle : float
-        cosine of the angle
+    degangle : float
+        Angle in degrees
 
     Returns
     -------
@@ -65,7 +65,7 @@ def ellipticalFun(dist,cosangle):
         Returns True if the point lies in the elliptical region. Otherwise False.
     """
 
-    if ((((dist-0.30)/0.05)**2 + (1/0.3572**2)*(cosangle+1)**2) < 1): return True
+    if ((((dist-0.29)/0.04)**2 + (1/40**2)*(degangle-180)**2) < 1): return True
 
     else: return False
 
@@ -107,12 +107,12 @@ def create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_
     atoms = list(top.atoms)
     OxygenHead, Hydrogen, OxygenTail, Hydrogen_atom_names, OxygenHead_names, OxygenTail_names = getGroups(traj,sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail)
     OxygenTail_bond_diction={}
-    
+
     if bonded_pdb_provided == False:
         for OxygenTail_index in  OxygenTail:
-            
+
             OxygenTail_bond_diction[OxygenTail_index]=[]
-            
+
         frame = 0
         L = traj[frame].unitcell_lengths
         #print(L)
@@ -135,11 +135,11 @@ def create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_
             OxygenTail_bond_diction[original_Otail_index].append(original_H_index)
             top.add_bond(atoms[original_Otail_index],atoms[original_H_index ])
 
-                    
-                    
+
+
         return OxygenTail_bond_diction, top
 
-        
+
 
     for OxygenTail_index in  OxygenTail:
         print("first_loop")
@@ -164,7 +164,7 @@ def create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_
     return OxygenTail_bond_diction
 
 
-def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail):
+def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail):
     """Function for calculating the 2D histrogram (cos angle vs distance) for determing H bonds.
     Parameters
     ----------
@@ -172,12 +172,12 @@ def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, s
         An mdtraj trajectory. It must contain topology information.
     r_cutoff : float
         Distance (nm) up to which pairs are considered.
-    res_r : int
+    nbins_r : int
         Number of bins in the r direction
-    res_a : int
-        Number of bins in the cos angle direction
-    skip_frames : int
-        Number of frames to be skipped at the start of the traj (maybe for eqlb).
+    nbins_a : int
+        Number of bins in the angle direction
+    skip_ever_x_frames : int
+        Number of frames to be skipped in each loop
     sel_oxygen_head: mdtraj selection string
         String for selecting the acceptor oxygens from the topology file.
     sel_oxygen_tail: mdtraj selection string
@@ -193,10 +193,10 @@ def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, s
 
     Returns
     -------
-    rdf_output : numpy array
-        bins for r (nm)
-    inter_output : numpy array
-        bins for cos angle
+    rdf_output : numpy ndarray
+        bins for r (nm), g(r)
+    inter_output : numpy ndarray
+        bins for angle, adf
     map_output : numpy 2D array
         2D array for the frequency on the 2D grid
     ans : ndarray
@@ -207,11 +207,11 @@ def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, s
 
     Examples
     --------
-    >>> res_r = 200 ; res_a = 200 ; r_cutoff = 0.75 ; skip =0
+    >>> nbins_r = 200 ; nbins_a = 200 ; r_cutoff = 0.75 ; skip_every_x_frames = 1
     >>> sel_oxygen_head = 'name O5' ; sel_hydrogen = 'name H1 or name H2' ; sel_oxygen_tail = 'name O5'; list_names_hydrogen = ["H1", "H2"] ; list_names_oxygen_head = ["O5"] ; list_names_oxygen_tail = ["O5"]
-    >>> rdf_output, inter_output, map_output,hbond,hbond_time = calualateHBMap(traj, r_cutoff, res_r, res_a, skip, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail)
+    >>> rdf_output, inter_output, map_output,hbond,hbond_time = calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail)
     >>> #Plotting
-    >>> plt.figure() ; cmap = plt.get_cmap('jet') ; plt.figure(figsize=(5, 3)) ; plt.style.use('default'); levels = np.linspace(0,10,11) ; cs = plt.contourf(rdf_output[0], inter_output[0], map_output,levels = levels, cmap=cmap) ; plt.xlabel('r (nm)') ; plt.ylabel('cos(\u03B8)') ; plt.xlim([0.2, 0.4]) ; plt.ylim([-1, -0.5]) ; plt.colorbar()
+    >>> plt.figure() ; cmap = plt.get_cmap('jet') ; plt.figure(figsize=(5, 3)) ; plt.style.use('default'); levels = np.linspace(0,10,11) ; cs = plt.contourf(rdf_output[0], inter_output[0], map_output,levels = levels, cmap=cmap) ; plt.xlabel('r (nm)') ; plt.ylabel('\u03B8 (degrees)') ; plt.xlim([0.2, 0.4]) ; plt.ylim([140, 180]) ; plt.colorbar()
 
     """
 
@@ -219,49 +219,44 @@ def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, s
     traj.top = top
     top = traj.top
     print("traj as {} bonds".format(top.n_bonds))
-    dr = r_cutoff/res_r
-#    radii = np.linspace(0.0, res_r * dr, res_r)
+    radii, dr = np.linspace(0, r_cutoff, nbins_r+1, retstep=True)
 
-    radii = [dr/2]
-    for i in range(1,res_r):
-        radii.append(radii[i-1]+dr)
-    radii = np.array(radii)
+    angles, da = np.linspace(0, np.pi, nbins_a+1, retstep=True)
 
-
-    angles = np.linspace(-1, 1, num=res_a)
-
-    da = angles[1]-angles[0]
     print("da", da)
     print("dr", dr)
-    volume = np.zeros(res_r);
-    for i in range(0, len(radii)-1):
-        volume[i] = (4/3)*np.pi*(radii[i+1]**3-radii[i]**3)
-    volume[-1]=((4/3)*np.pi*((radii[-1]+dr)**3-radii[-1]**3))
+    volume_shells = np.zeros(nbins_r);
+    for i in range(0, nbins_r):
+        volume_shells[i] = (4/3)*np.pi*(radii[i+1]**3-radii[i]**3)
+
+    r_centers = 0.5 * (radii[1:] + radii[:-1])
+    a_centers = 0.5 * (angles[1:] + angles[:-1])
 
     """ Initialize output array """
-    gr_final = np.zeros(res_r)
-    intangle_final = np.zeros(res_a)
-    maps_final = np.zeros((res_a,res_r))
+    gr_final = np.zeros(nbins_r)
+    intangle_final = np.zeros(nbins_a)
+    maps_final = np.zeros((nbins_a,nbins_r))
     hbond_time = []
     ans = []
     prev = 0
-
+    frames_calculated = 0
     """ Iterate through each frame """
-    for frame in range(skip_frames, traj.n_frames):
-
+    for frame in range(0, traj.n_frames, skip_every_x_frames):
+        frames_calculated +=1
         print("working on {}".format(frame))
 
         L = traj[frame].unitcell_lengths
         #print(L)
         box = freud.box.Box(Lx=L[0][0],Ly= L[0][1], Lz=L[0][2])
-        intangle_prob = np.zeros(res_a)
-        g_of_r = np.zeros(res_r)
-        maps = np.zeros((res_a,res_r))
+        intangle_prob = np.zeros(nbins_a)
+        g_of_r = np.zeros(nbins_r)
+        maps = np.zeros((nbins_a, nbins_r))
 
         """ Get Neighbors """
         OxygenHead, Hydrogen, OxygenTail, Hydrogen_atom_names, OxygenHead_names, OxygenTail_names = getGroups(traj,  sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail)
         numHead = len(OxygenHead)
         numTail = len(OxygenTail)
+        #print(numHead, numTail)
         points_O_tail=traj.xyz[frame][OxygenTail]
         points_O_head=traj.xyz[frame][OxygenHead]
         aq = freud.locality.AABBQuery(box, points_O_head)
@@ -272,7 +267,7 @@ def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, s
 
         query_result = aq.query(points_O_tail, dict(r_max=r_cutoff))
         pairs_analyzed = []
-
+        n_pairs = 0
         for shbond in query_result:
             if np.isclose(shbond[2], 0): #means that the distance is zero
                 continue
@@ -287,62 +282,79 @@ def calualateHBMap(traj, r_cutoff, res_r, res_a, skip_frames, sel_oxygen_head, s
             else:
                 pairs_analyzed.append([original_Otail_index, original_Ohead_index])
                 pairs_analyzed.append([original_Ohead_index, original_Otail_index])
+                n_pairs+=1
             #now check if tail is connected to a H
             #print(bond_diction)
             for bonded_H in bond_diction[original_Otail_index]:
 
                 original_H_index = bonded_H
-               # print("{}-{} is bonded to {}-{}".format(original_Otail_index,bond.atom1.name, original_H_index,bond.atom2.name))
-                index_d = int(dist / dr)
-                if 0 < index_d < res_r:
-                    g_of_r[index_d] += 1.00
-                    """ calculate angle """
-                    normal_angle = md.compute_angles(traj[frame], np.array([[original_Otail_index, original_H_index, original_Ohead_index]]))[0][0]
 
-                    inter_angle = np.cos(normal_angle) #np.cos(normal_angle/180*np.pi)
-                    #print(inter_angle)
-                    if inter_angle < 1 and inter_angle > -1:
-                        index_i = np.digitize(inter_angle,angles)-1
-                        intangle_prob[index_i] += 1.00
-                        """ put into map """
-                        maps[index_i,index_d] += 1.00
-                        if ellipticalFun(dist, inter_angle) :
-                            ans.append([original_Otail_index, original_Ohead_index])
+
+               # print("{}-{} is bonded to {}-{}".format(original_Otail_index,bond.atom1.name, original_H_index,bond.atom2.name))
+                index_d = np.digitize(dist, radii)-1
+                g_of_r[index_d] += 1.00
+                """ calculate angle """
+                normal_angle = md.compute_angles(traj[frame], np.array([[original_Otail_index, original_H_index, original_Ohead_index]]))[0][0] - 1e-12
+                print("Angle is", normal_angle)
+                index_i = np.digitize(normal_angle,angles)-1
+                print("index_i is",index_i)
+                intangle_prob[index_i] += 1.00
+                """ put into map """
+                maps[index_i,index_d] += 1.00
+                deg_angle = 180*normal_angle/np.pi
+                if ellipticalFun(dist, deg_angle) :
+                    ans.append([original_Otail_index, original_Ohead_index])
 
 
         hbond_time.append(len(ans)-prev)
         prev = len(ans)
         """ normalization """
-        total_g = numHead * (numTail-1) / (L[0][0]*L[0][1]*L[0][2])
+        #print("The num pairs found in this frame is {}".format(n_pairs))
+        NbyV = numHead * (numTail-1) / (L[0][0]*L[0][1]*L[0][2])
+        #print("NbyV is ", NbyV)
         #total_g = numHead * (numTail) / (L[0][0]*L[0][1]*L[0][2])
-        total_m = np.zeros(res_a)
+        total_m = np.zeros(nbins_a)
 
         """ map normalization """
         for i, value in enumerate(g_of_r):
-            g_of_r[i] = value / volume[i] /total_g
+            g_of_r[i] = value /( 4*np.pi*(r_centers[i]**2)*dr *NbyV)
 
-        for i in range(0, res_a):
+        for i in range(nbins_a):
+            intangle_prob[i] = intangle_prob[i]/np.sin(a_centers[i])
 
-            for j in range(0, res_r):
+        for i in range(0, nbins_a):
+            total_m[i] = sum(maps[i,:])
+            if total_m[i] == 0:
+                maps[i,:] = 0
+                continue
 
-                maps[i,j] /=  volume[j] * total_g *da
+            for j in range(0, nbins_r):
+                rho_r_theta = 4*np.pi*(r_centers[j]**2)*abs(np.sin(a_centers[i]))*dr*da
+
+#                 if maps[i,j] > 0:
+#                     print("r is ",r_centers[j] )
+#                     print("rho_r_theta is ", rho_r_theta)
+#                     print("element volume is ", dr*da)
+#                     print("freq of this square is", maps[i,j])
+#                     print("sin theta is ",np.sin(a_centers[i]) )
+#                     print("updated maps[i,j]", maps[i,j] / (rho_r_theta*NbyV))
+                maps[i,j] = maps[i,j] / (rho_r_theta*NbyV)
 
 
 
         #g_of_r /= sum(g_of_r)*dr
-        intangle_prob /= da*sum(intangle_prob)
+        intangle_prob = intangle_prob/(da*sum(intangle_prob))
 
         intangle_final += intangle_prob
         maps_final += maps
         gr_final += g_of_r
 
-    intangle_final /= frame
-    maps_final /= frame
-    gr_final /= frame
+    intangle_final /= frames_calculated
+    maps_final /= frames_calculated
+    gr_final /= frames_calculated
 
-    inter_output = np.array([angles, intangle_final])
-    rdf_output = np.array([radii, gr_final])
+    inter_output = np.array([a_centers, intangle_final])
+    rdf_output = np.array([r_centers, gr_final])
     map_output = maps_final
     return rdf_output, inter_output, map_output,ans,hbond_time
-
 
