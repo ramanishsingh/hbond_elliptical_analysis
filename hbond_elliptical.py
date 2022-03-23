@@ -142,11 +142,10 @@ def create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_
 
 
     for OxygenTail_index in  OxygenTail:
-        print("first_loop")
+        
         OxygenTail_bond_diction[OxygenTail_index]=[]
         for bond in top.bonds:
-            print(bond.atom1.name)
-            print(bond.atom2.name)
+
             if (bond.atom1.index == OxygenTail_index) or (bond.atom2.index == OxygenTail_index):
 
                 if bond.atom1.name in Hydrogen_atom_names:
@@ -161,10 +160,10 @@ def create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_
 
             else:
                 continue
-    return OxygenTail_bond_diction
+    return OxygenTail_bond_diction, top
 
 
-def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail):
+def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail, bonded_pdb_provided = False):
     """Function for calculating the 2D histrogram (cos angle vs distance) for determing H bonds.
     Parameters
     ----------
@@ -189,7 +188,9 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
     list_names_oxygen_head: List of strings
         List of strings containing the names (in the top file) of the acceptor Oxygen atoms
     list_names_oxygen_tail: List of strings
-        List of strings containing the names (in the top file) of the oxygen atoms bonded to the donor H-atomsi
+        List of strings containing the names (in the top file) of the oxygen atoms bonded to the donor H-atoms
+    bonded_pdb_provided : Boolean
+        Boolean indicating if the topology file contains the bond information
 
     Returns
     -------
@@ -215,7 +216,7 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
 
     """
 
-    bond_diction, top = create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail)
+    bond_diction, top = create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail, bonded_pdb_provided = bonded_pdb_provided)
     traj.top = top
     top = traj.top
     print("traj as {} bonds".format(top.n_bonds))
@@ -357,4 +358,3 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
     rdf_output = np.array([r_centers, gr_final])
     map_output = maps_final
     return rdf_output, inter_output, map_output,ans,hbond_time
-
