@@ -304,7 +304,7 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
                 index_d = np.digitize(dist, radii)-1
                 g_of_r[index_d] += 1.00
                 """ calculate angle """
-                normal_angle = md.compute_angles(traj[frame], np.array([[original_Otail_index, original_H_index, original_Ohead_index]]))[0][0] - 1e-12
+                normal_angle = md.compute_angles(traj[frame], np.array([[original_Otail_index, original_H_index, original_Ohead_index]]))[0][0] - 1e-6
                 #print("Angle is", normal_angle)
                 index_i = np.digitize(normal_angle,angles)-1
                 #print("index_i is",index_i)
