@@ -38,6 +38,7 @@ bonded_pdb_provided = True
 
 rdf_output, inter_output, map_output,hbond,hbond_time = calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail, bonded_pdb_provided)
 ```
+After you run this analysis, you can generate a 2d-histgram of Hbond-freq vs r-theta (see the [jupyter notebook](https://github.com/ramanishsingh/hbond_elliptical_analysis/blob/master/compare_hbond_mdtraj/compare_md_hbondelliptical.ipynb) in the `compare_hbond_mdtraj` folder) and decide if you need to change the widths and center of the ellipse. If so, then you need to modify the values in `hbond_elliptical.ellipticalFun` and redo the analysis.
 
 ## Contributing
 If you have any questions, or would like to contribute, email me at singh891@umn.edu
