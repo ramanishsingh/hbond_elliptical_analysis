@@ -65,7 +65,7 @@ def ellipticalFun(dist,degangle):
         Returns True if the point lies in the elliptical region. Otherwise False.
     """
 
-    if ((((dist-0.29)/0.04)**2 + (1/40**2)*(degangle-180)**2) < 1): return True
+    if ((((dist-0.29)/0.05)**2 + (1/50**2)*(degangle-180)**2) < 1): return True
 
     else: return False
 
@@ -142,7 +142,7 @@ def create_bond_dict(traj, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_
 
 
     for OxygenTail_index in  OxygenTail:
-        
+
         OxygenTail_bond_diction[OxygenTail_index]=[]
         for bond in top.bonds:
 
@@ -212,8 +212,7 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
     >>> sel_oxygen_head = 'name O5' ; sel_hydrogen = 'name H1 or name H2' ; sel_oxygen_tail = 'name O5'; list_names_hydrogen = ["H1", "H2"] ; list_names_oxygen_head = ["O5"] ; list_names_oxygen_tail = ["O5"]
     >>> rdf_output, inter_output, map_output,hbond,hbond_time = calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_oxygen_head, sel_oxygen_tail, sel_hydrogen, list_names_hydrogen, list_names_oxygen_head, list_names_oxygen_tail)
     >>> #Plotting
-    >>> plt.figure() ; cmap = plt.get_cmap('jet') ; plt.figure(figsize=(5, 3)) ; plt.style.use('default'); levels = np.linspace(0,10,11) ; cs = plt.contourf(rdf_output[0], inter_output[0]*180/np.pi, map_output,levels = levels, cmap=cmap) ; plt.xlabel('r (nm)') ; plt.ylabel('\u03B8 (degrees)') ; plt.xlim([0.2, 0.4]) ; plt.ylim([140, 180]) ; plt.colorbar()
-    >>> #You might have to change colorbar levels to get the 2d map
+    >>> plt.figure() ; cmap = plt.get_cmap('jet') ; plt.figure(figsize=(5, 3)) ; plt.style.use('default'); levels = np.linspace(0,10,11) ; cs = plt.contourf(rdf_output[0], inter_output[0], map_output,levels = levels, cmap=cmap) ; plt.xlabel('r (nm)') ; plt.ylabel('\u03B8 (degrees)') ; plt.xlim([0.2, 0.4]) ; plt.ylim([140, 180]) ; plt.colorbar()
 
     """
 
@@ -268,8 +267,8 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
         """ Iterate through Neighbors """
 
         query_result = aq.query(points_O_tail, dict(r_max=r_cutoff))
-        pairs_analyzed = []
-        n_pairs = 0
+        triplets_analyzed = []
+        #n_pairs = 0
         for shbond in query_result:
             if np.isclose(shbond[2], 0): #means that the distance is zero
                 continue
@@ -279,12 +278,21 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
             #print(point, neighbor)
             original_Otail_index = OxygenTail[point]
             original_Ohead_index = OxygenHead[neighbor]
-            if [original_Otail_index, original_Ohead_index] in pairs_analyzed:
+            potential_lists = []
+            for bonded_H in bond_diction[original_Otail_index]:
+                potential_lists.append([original_Otail_index, bonded_H, original_Ohead_index])
+            triplet_already_analyzed = False
+            for triplet in potential_lists:
+                if triplet in triplets_analyzed:
+                    triplet_already_analyzed = True
+
+            if triplet_already_analyzed:
                 continue
             else:
-                pairs_analyzed.append([original_Otail_index, original_Ohead_index])
-                pairs_analyzed.append([original_Ohead_index, original_Otail_index])
-                n_pairs+=1
+                for bonded_H in bond_diction[original_Otail_index]:
+
+                    triplets_analyzed.append([original_Otail_index, bonded_H, original_Ohead_index])
+                    triplets_analyzed.append([original_Ohead_index, bonded_H, original_Otail_index])
             #now check if tail is connected to a H
             #print(bond_diction)
             for bonded_H in bond_diction[original_Otail_index]:
@@ -304,8 +312,9 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
                 """ put into map """
                 maps[index_i,index_d] += 1.00
                 deg_angle = 180*normal_angle/np.pi
+                #print("{}-{}-{} has a distance of {} and an angle of {}".format(original_Otail_index, original_H_index, original_Ohead_index, dist, deg_angle))
                 if ellipticalFun(dist, deg_angle) :
-                    ans.append([original_Otail_index, original_Ohead_index])
+                    ans.append(np.array([original_Otail_index, original_H_index, original_Ohead_index]))
 
 
         hbond_time.append(len(ans)-prev)
