@@ -200,9 +200,9 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
         bins for angle, adf
     map_output : numpy 2D array
         2D array for the frequency on the 2D grid
-    ans : ndarray
-        n_bonds x 2 array that contains the pair of indices of atoms that make a H bond
-    hbond_time : array
+    ans_overal : list of nhbond_i x 3 ndarray with a length equal to numframes 
+        nhbonds_i x 3 array that contains the pair of indices of atoms that make a H bond (O_Tail, H, O_Head)
+    hbond_time : List of length equal to numframes
         number of Hbonds in each frame
 
 
@@ -238,11 +238,12 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
     intangle_final = np.zeros(nbins_a)
     maps_final = np.zeros((nbins_a,nbins_r))
     hbond_time = []
-    ans = []
+    ans_overall = []
     prev = 0
     frames_calculated = 0
     """ Iterate through each frame """
     for frame in range(0, traj.n_frames, skip_every_x_frames):
+        ans = np.array([]).reshape(0,3)
         frames_calculated +=1
         print("working on {}".format(frame))
 
@@ -304,8 +305,12 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
                 index_d = np.digitize(dist, radii)-1
                 g_of_r[index_d] += 1.00
                 """ calculate angle """
-                normal_angle = md.compute_angles(traj[frame], np.array([[original_Otail_index, original_H_index, original_Ohead_index]]))[0][0] - 1e-6
-                #print("Angle is", normal_angle)
+                normal_angle = md.compute_angles(traj[frame], np.array([[original_Otail_index, original_H_index, original_Ohead_index]]))[0][0]
+                if normal_angle > np.pi:
+
+                    print("Angle is {} radians greater than {}", normal_angle-np.pi, np.pi)
+                    normal_angle = normal_angle -1e-3
+
                 index_i = np.digitize(normal_angle,angles)-1
                 #print("index_i is",index_i)
                 intangle_prob[index_i] += 1.00
@@ -314,11 +319,12 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
                 deg_angle = 180*normal_angle/np.pi
                 #print("{}-{}-{} has a distance of {} and an angle of {}".format(original_Otail_index, original_H_index, original_Ohead_index, dist, deg_angle))
                 if ellipticalFun(dist, deg_angle) :
-                    ans.append(np.array([original_Otail_index, original_H_index, original_Ohead_index]))
+                    ans = np.vstack([ans, np.array([original_Otail_index, original_H_index, original_Ohead_index])])
+                    
 
 
-        hbond_time.append(len(ans)-prev)
-        prev = len(ans)
+        hbond_time.append(ans.shape[0])
+        ans_overall.append(ans)
         """ normalization """
         #print("The num pairs found in this frame is {}".format(n_pairs))
         NbyV = numHead * (numTail-1) / (L[0][0]*L[0][1]*L[0][2])
@@ -367,4 +373,4 @@ def calualateHBMap(traj, r_cutoff, nbins_r, nbins_a, skip_every_x_frames, sel_ox
     inter_output = np.array([a_centers, intangle_final])
     rdf_output = np.array([r_centers, gr_final])
     map_output = maps_final
-    return rdf_output, inter_output, map_output,ans,hbond_time
+    return rdf_output, inter_output, map_output,ans_overall,hbond_time
