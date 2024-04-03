@@ -1,3 +1,4 @@
+Please contact me at singh891@umn.edu / rsthakur922@gmail.com before you use this code. 
 # hbond_elliptical
 
 `hbond_elliptical` is a Python library for conducting H-bond analysis for molecular dynamics and Monte Carlo trajectories.
